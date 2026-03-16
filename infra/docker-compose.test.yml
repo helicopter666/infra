@@ -1,0 +1,29 @@
+services:
+
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}_test
+    ports:
+      - "5433:5432"
+
+  fastapi:
+    build:
+      target: development
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_test
+    command: pytest tests/ -v --asyncio-mode=auto --cov=app --cov-report=term-missing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  fastapi-worker:
+    profiles:
+      - donotstart
+
+  django:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}_test
+      DJANGO_SETTINGS_MODULE: config.settings.test
+    command: pytest tests/ -v --cov=apps --cov-report=term-missing
